@@ -80,6 +80,29 @@ public function getEventsByUser($userId) {
     return $events;
 }
 
+public function getEventCount($user_id, $filter = '')
+{
+    $query = "SELECT COUNT(*) AS total FROM events WHERE created_by = ?";
+
+    // Add filtering condition
+    if ($filter) {
+        $query .= " AND name LIKE ?";
+    }
+
+    $stmt = $this->conn->prepare($query);
+    if ($filter) {
+        $filter = "%$filter%";
+        $stmt->bind_param("ss", $user_id, $filter);
+    } else {
+        $stmt->bind_param("s", $user_id);
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+
+    return $row['total'];
+}
 
 
 

@@ -1,2 +1,2 @@
 <?php
-define("baseurl","http://localhost/event_management/public");
+define("baseurl","http://localhost/event_management/Event-Management/public");

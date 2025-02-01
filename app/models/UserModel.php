@@ -57,5 +57,46 @@ class UserModel
             return false; // Login failed
         }
     }
+    public function getUserById($user_id)
+{
+    $stmt = $this->conn->prepare("SELECT id, username, role, created_at FROM users WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_assoc(); // Returns user details as an associative array
+}
+public function getEventsByUser($user_id, $limit = 10, $offset = 0, $sort = 'name', $filter = '')
+{
+    $query = "SELECT * FROM events WHERE user_id = ?";
+
+    // Add filtering condition
+    if ($filter) {
+        $query .= " AND name LIKE ?";
+    }
+
+    // Sorting logic
+    $query .= " ORDER BY " . $sort . " ASC";
+
+    // Pagination logic
+    $query .= " LIMIT ? OFFSET ?";
+
+    $stmt = $this->conn->prepare($query);
+
+    // Bind parameters
+    if ($filter) {
+        $filter = "%$filter%";
+        $stmt->bind_param("ssii", $user_id, $filter, $limit, $offset);
+    } else {
+        $stmt->bind_param("iiii", $user_id, $limit, $offset);
+    }
+
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+
+
+
 }
 ?>

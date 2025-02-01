@@ -1,33 +1,25 @@
 <?php
 session_start();
 require_once "../app/models/EventModel.php";
+require_once "../app/models/UserModel.php";
+
 // Redirect to login if the user is not authenticated
 if (!isset($_SESSION['user_id'])) {
     header("Location: login");
     exit();
 }
 
+$user = new UserModel();
 // Database connection
-$conn = new mysqli('localhost', 'root', '', 'event_management');
-if ($conn->connect_error) {
-    die("Database Connection Failed: " . $conn->connect_error);
-}
-
-// Fetch the logged-in user's details
-$user_id = $_SESSION['user_id'];
-$user_query = $conn->prepare("SELECT username FROM users WHERE id = ?");
-$user_query->bind_param("i", $user_id);
-$user_query->execute();
-$user_result = $user_query->get_result();
-$user = $user_result->fetch_assoc();
+$user = $user->getUserById($_SESSION['user_id']);
 
 // Check if the user exists to prevent null access
 if (!$user) {
     header("Location: login");
     exit();
 }
-$events = new EventModel();
 
+$events = new EventModel();
 $event_result = $events->getEventsByUser($_SESSION['user_id']);
 ?>
 
@@ -126,135 +118,192 @@ $event_result = $events->getEventsByUser($_SESSION['user_id']);
   <!-- Navbar -->
   <?php include('../public/include/navbar.php');?>
 
-  <!-- Dashboard Content -->
   <div class="container max-w-6xl mx-auto px-4 py-8">
     <h1 class="text-3xl font-semibold text-blue-600 mb-6">Welcome, <?php echo htmlspecialchars($user['username']); ?>!</h1>
 
     <!-- Create Event Button -->
     <a href="event/create" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 mb-6 inline-block">
-      Create New Event
+        Create New Event
     </a>
+
+    <!-- Search Bar and Sorting -->
+    <div class="mb-6 flex justify-between items-center">
+        <input type="text" id="search" placeholder="Search events..." class="px-4 py-2 border rounded-lg" onkeyup="filterEvents()">
+        <select id="sort-by" class="px-4 py-2 border rounded-lg" onchange="sortEvents()">
+            <option value="name">Sort by Name</option>
+            <option value="date">Sort by Date</option>
+            <option value="location">Sort by Location</option>
+        </select>
+    </div>
 
     <!-- Event List as Cards -->
     <div class="space-y-6" id="event-list">
-<?php 
-if (count($event_result) > 0) {
-    foreach ($event_result as $event) {
-        echo '
-        <div class="event-card">
-            <div class="px-6 py-4 flex justify-between items-center cursor-pointer card-header" onclick="toggleCard(' . $event['id'] . ')">
-                <div class="text-xl font-semibold text-gray-800 event-name">' . htmlspecialchars($event['name']) . '</div>
-                <div class="text-sm text-gray-600 event-date" id="event-date-' . $event['id'] . '">
-                    ' . date("d M, Y g:i A", strtotime($event['date'])) . '
-                </div>
-                <i id="chevron-' . $event['id'] . '" class="fas fa-chevron-down chevron"></i>
-            </div>
-            <div id="card-content-' . $event['id'] . '" class="card-content px-6 py-4">
-                <p><strong>Location:</strong> ' . htmlspecialchars($event['location']) . '</p>
-                <p><strong>Max Capacity:</strong> ' . htmlspecialchars($event['max_capacity']) . '</p>
-                <div class="mt-4 space-x-2 flex items-center justify-start action-buttons">
-                    <a href="event/view?id=' . $event['id'] . '" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg">View</a>
-                    <a href="event/edit?id=' . $event['id'] . '" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg">Edit</a>
-                    <a href="javascript:void(0);" onclick="confirmDelete(' . $event['id'] . ')" class="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-lg">Delete</a>
-                    <a href="register_attendee.php?event_id=' . $event['id'] . '" class="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg">Register</a>
-                    <a href="download_report.php?event_id=' . $event['id'] . '" class="bg-orange-600 text-white hover:bg-orange-700 px-4 py-2 rounded-lg">Report</a>
-                </div>
-            </div>
-        </div>';
-    }
-} else {
-    echo '<div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
-            <p class="font-bold">No Events Found</p>
-            <p>Create an event first to get started!</p>
-        </div>';
-}
-?>
+        <!-- Events will be dynamically inserted here -->
     </div>
 
-  </div>
+    <!-- Pagination Controls -->
+    <div class="flex justify-between mt-8" id="pagination">
+        <button id="prev-btn" onclick="changePage(-1)" class="px-4 py-2 bg-gray-600 text-white rounded-lg">Previous</button>
+        <button id="next-btn" onclick="changePage(1)" class="px-4 py-2 bg-gray-600 text-white rounded-lg">Next</button>
+    </div>
+</div>
 
-  <script>
+<!-- Modal for Confirming Deletion -->
+<div id="modal" class="hidden fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
+  <div class="bg-white p-6 rounded-lg w-1/3">
+    <p id="modal-message" class="text-lg font-semibold"></p>
+    <div class="mt-4 flex justify-end">
+      <button id="modal-cancel" onclick="closeModal()" class="px-4 py-2 bg-gray-400 text-white rounded-lg">Cancel</button>
+      <button id="modal-confirm" onclick="deleteEvent()" class="px-4 py-2 bg-red-600 text-white rounded-lg ml-4 hidden">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let filter = '';
+    let sortBy = 'name';
+
+    function fetchEvents() {
+        fetch(`<?php echo baseurl?>/function/get_events.php?page=${currentPage}&filter=${filter}&sort=${sortBy}`)
+            .then(response => response.json())
+            .then(data => {
+                totalPages = data.total_pages;
+                displayEvents(data.events);
+                updatePagination();
+            })
+            .catch(error => console.error('Error fetching events:', error));
+    }
+
+    function displayEvents(events) {
+        const eventList = document.getElementById('event-list');
+        eventList.innerHTML = '';
+
+        if (events.length > 0) {
+            events.forEach(event => {
+                eventList.innerHTML += `
+                    <div class="event-card">
+                        <div class="px-6 py-4 flex justify-between items-center cursor-pointer card-header" onclick="toggleCard(${event.id})">
+                            <div class="text-xl font-semibold text-gray-800 event-name">${event.name}</div>
+                            <div class="text-sm text-gray-600 event-date" id="event-date-${event.id}">
+                                ${new Date(event.date).toLocaleString()}
+                            </div>
+                            <i id="chevron-${event.id}" class="fas fa-chevron-down chevron"></i>
+                        </div>
+                        <div id="card-content-${event.id}" class="card-content px-6 py-4">
+                            <p><strong>Location:</strong> ${event.location}</p>
+                            <p><strong>Max Capacity:</strong> ${event.max_capacity}</p>
+                            <div class="mt-4 space-x-2 flex items-center justify-start action-buttons">
+                                <a href="event/view?id=${event.id}" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg">View</a>
+                                <a href="event/edit?id=${event.id}" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg">Edit</a>
+                                <a href="javascript:void(0);" onclick="confirmDelete(${event.id})" class="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-lg">Delete</a>
+                                <a href="register_attendee.php?event_id=${event.id}" class="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg">Register</a>
+                                <a href="download_report.php?event_id=${event.id}" class="bg-orange-600 text-white hover:bg-orange-700 px-4 py-2 rounded-lg">Report</a>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            eventList.innerHTML = `
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                    <p class="font-bold">No Events Found</p>
+                    <p>Create an event first to get started!</p>
+                </div>`;
+        }
+    }
+
+    function filterEvents() {
+        filter = document.getElementById('search').value;
+        fetchEvents();
+    }
+
+    function sortEvents() {
+        sortBy = document.getElementById('sort-by').value;
+        fetchEvents();
+    }
+
+    function changePage(direction) {
+        if (currentPage + direction > 0 && currentPage + direction <= totalPages) {
+            currentPage += direction;
+            fetchEvents();
+        }
+    }
+
+    function updatePagination() {
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        if (currentPage === 1) {
+            prevBtn.disabled = true;
+        } else {
+            prevBtn.disabled = false;
+        }
+
+        if (currentPage === totalPages) {
+            nextBtn.disabled = true;
+        } else {
+            nextBtn.disabled = false;
+        }
+    }
+
     function toggleCard(eventId) {
-      const cardContent = document.getElementById(`card-content-${eventId}`);
-      const chevron = document.getElementById(`chevron-${eventId}`);
-      cardContent.classList.toggle('active');
-      chevron.classList.toggle('rotate');
+        const cardContent = document.getElementById(`card-content-${eventId}`);
+        const chevron = document.getElementById(`chevron-${eventId}`);
+        cardContent.classList.toggle('active');
+        chevron.classList.toggle('rotate');
     }
 
     let deleteEventId = null;
 
     function confirmDelete(eventId) {
-      deleteEventId = eventId;
-      showModal('Are you sure you want to delete this event?', true);
+        deleteEventId = eventId;
+        showModal('Are you sure you want to delete this event?', true);
     }
 
     function deleteEvent() {
-      if (!deleteEventId) return;
+        if (!deleteEventId) return;
 
-      fetch('<?php echo baseurl?>/function/delete_event.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `id=${deleteEventId}`
-})
-.then(response => response.json())
-.then(data => {
-    console.log(data); // Debugging
-    if (data.success) {
-        showModal('Event deleted successfully!');
-        refreshEventList();
-    } else {
-        showModal('Failed to delete event: ' + data.message);
-    }
-})
-.catch(error => {
-    console.error('Error:', error);
-    showModal('An error occurred. Please try again.');
-});
+        fetch('<?php echo baseurl?>/function/delete_event.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id=${deleteEventId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showModal('Event deleted successfully!');
+                fetchEvents();
+            } else {
+                showModal('Failed to delete event: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showModal('An error occurred. Please try again.');
+        });
 
-      deleteEventId = null;
+        deleteEventId = null;
     }
 
     function showModal(message, isConfirm = false) {
-      document.getElementById('modal-message').innerText = message;
-      document.getElementById('modal').classList.remove('hidden');
+        document.getElementById('modal-message').innerText = message;
+        document.getElementById('modal').classList.remove('hidden');
 
-      if (isConfirm) {
-        document.getElementById('modal-confirm').classList.remove('hidden');
-        document.getElementById('modal-confirm').onclick = deleteEvent;
-      } else {
-        document.getElementById('modal-confirm').classList.add('hidden');
-      }
+        if (isConfirm) {
+            document.getElementById('modal-confirm').classList.remove('hidden');
+            document.getElementById('modal-confirm').onclick = deleteEvent;
+        } else {
+            document.getElementById('modal-confirm').classList.add('hidden');
+        }
     }
 
     function closeModal() {
-      document.getElementById('modal').classList.add('hidden');
+        document.getElementById('modal').classList.add('hidden');
     }
 
-    function refreshEventList() {
-      fetch('<?php echo baseurl?>/function/fetch_events.php')
-        .then(response => response.text())
-        .then(data => {
-          document.getElementById('event-list').innerHTML = data;
-        })
-        .catch(error => console.error('Error fetching event list:', error));
-    }
-  </script>
-
-  <!-- Modal Structure -->
-  <div id="modal" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white p-6 rounded-lg shadow-lg max-w-sm text-center">
-      <p id="modal-message" class="text-lg font-semibold"></p>
-      <div class="mt-4 flex justify-center space-x-4">
-        <button id="modal-confirm" class="bg-red-600 text-white px-4 py-2 rounded-lg hidden">Yes</button>
-        <button onclick="closeModal()" class="bg-gray-600 text-white px-4 py-2 rounded-lg">Cancel</button>
-      </div>
-    </div>
-  </div>
+    fetchEvents();
+</script>
 
 </body>
 </html>
-
-<?php
-// Close the database connection
-$conn->close();
-?> 
