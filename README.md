@@ -19,7 +19,7 @@ You can explore the demo of the Event Management System at:
 
 To log in:
 - **Username**: nahid
-- **Password**: 12345678
+- **Password**: 123456
 
 ## Tech Stack
 
