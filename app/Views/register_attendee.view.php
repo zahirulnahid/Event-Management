@@ -152,6 +152,21 @@ $eventURL = baseurl."/events/" . $event_id;
         <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700">Register for Event</button>
       </form>
     </div>
+        <!-- Social Share Section -->
+        <div class="mt-12 text-center">
+      <h3 class="text-xl font-semibold text-blue-600 mb-4">Share this event</h3>
+      <div class="flex justify-center gap-4">
+        <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo $eventURL; ?>" target="_blank" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700">Facebook</a>
+        <a href="https://wa.me/?text=<?php echo urlencode($eventURL); ?>" target="_blank" class="bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600">WhatsApp</a>
+        <a href="https://twitter.com/intent/tweet?text=<?php echo urlencode($eventURL); ?>" target="_blank" class="bg-blue-400 text-white py-2 px-4 rounded-lg hover:bg-blue-500">Twitter</a>
+      </div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="mt-12 text-center">
+      <h3 class="text-lg font-semibold text-blue-600 mb-4">Scan QR Code to Register</h3>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=<?php echo urlencode($eventURL); ?>" alt="QR Code" class="mx-auto">
+    </div>
   </div>
 
 </body>
