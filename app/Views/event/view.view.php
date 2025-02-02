@@ -55,13 +55,13 @@ if (!$event) {
   Delete Event
 </button>
         <a
-          href="register_attendee.php?event_id=<?php echo $event['id']; ?>"
+          href="<?php echo baseurl."//events/".$event['id']; ?>"
           class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-green-700"
         >
           Register Attendees
         </a>
         <a
-          href="download_report.php?event_id=<?php echo $event['id']; ?>"
+          href="<?php echo baseurl?>/download_report.php?event_id=<?php echo $event['id']; ?>"
           class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold text-center hover:bg-purple-700"
         >
           Generate Report

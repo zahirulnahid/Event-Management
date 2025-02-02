@@ -67,7 +67,21 @@ class EventModel {
 
 // Fetch events by created_by (user ID)
 public function getEventsByUser($userId) {
-    $query = "SELECT id, name, description, date, location, max_capacity, created_by, created_at FROM events WHERE created_by = ?";
+    $query = "SELECT 
+    events.id, 
+    events.name, 
+    events.description, 
+    events.date, 
+    events.location, 
+    events.max_capacity, 
+    events.created_by, 
+    events.created_at,
+    COUNT(attendees.id) AS total_registered
+FROM events
+LEFT JOIN attendees ON events.id = attendees.event_id
+WHERE events.created_by = ?
+GROUP BY events.id;
+";
     $stmt = $this->conn->prepare($query);
     $stmt->bind_param("i", $userId);
     $stmt->execute();

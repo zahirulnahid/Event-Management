@@ -193,12 +193,13 @@ $event_result = $events->getEventsByUser($_SESSION['user_id']);
                         </div>
                         <div id="card-content-${event.id}" class="card-content px-6 py-4">
                             <p><strong>Location:</strong> ${event.location}</p>
+                            <p><strong>Total Registered:</strong> ${event.total_registered}</p>
                             <p><strong>Max Capacity:</strong> ${event.max_capacity}</p>
                             <div class="mt-4 space-x-2 flex items-center justify-start action-buttons">
                                 <a href="event/view?id=${event.id}" class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg">View</a>
                                 <a href="event/edit?id=${event.id}" class="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-lg">Edit</a>
                                 <a href="javascript:void(0);" onclick="confirmDelete(${event.id})" class="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-lg">Delete</a>
-                                <a href="register_attendee.php?event_id=${event.id}" class="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg">Register</a>
+                                <a href="events/${event.id}" class="bg-purple-600 text-white hover:bg-purple-700 px-4 py-2 rounded-lg">Register</a>
                                 <a href="download_report.php?event_id=${event.id}" class="bg-orange-600 text-white hover:bg-orange-700 px-4 py-2 rounded-lg">Report</a>
                             </div>
                         </div>

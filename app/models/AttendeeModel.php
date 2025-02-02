@@ -1,6 +1,7 @@
 <?php
 class AttendeeModel {
     private $db;
+    private $conn;
 
     public function __construct() {
         $database = new Database();
@@ -8,10 +9,10 @@ class AttendeeModel {
     }
 
     // Register an attendee
-    public function registerAttendee($event_id, $name, $email) {
-        $query = "INSERT INTO attendees (event_id, name, email) VALUES (?, ?, ?)";
+    public function registerAttendee($event_id, $name, $email, $age, $gender, $phone) {
+        $query = "INSERT INTO attendees (event_id, name, email, age, gender, phone) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($query);
-        $stmt->bind_param("iss", $event_id, $name, $email);
+        $stmt->bind_param("ississ", $event_id, $name, $email, $age, $gender, $phone);
         return $stmt->execute();
     }
 
@@ -26,9 +27,9 @@ class AttendeeModel {
         return $row['count'];
     }
 
-    // Get all attendees for an event
+    // Get all attendees for an event with additional fields
     public function getAttendeesByEventId($event_id) {
-        $query = "SELECT name, email, registered_at FROM attendees WHERE event_id = ?";
+        $query = "SELECT id, event_id, name, email, registered_at, age, gender, phone FROM attendees WHERE event_id = ?";
         $stmt = $this->conn->prepare($query);
         $stmt->bind_param("i", $event_id);
         $stmt->execute();
