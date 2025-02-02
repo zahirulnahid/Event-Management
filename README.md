@@ -27,13 +27,13 @@ To log in:
 - **Backend**: PHP
 - **Database**: MySQL
 - **Additional Libraries**: 
-    - [Mermaid](https://www.mermaid-js.org/) for user flow diagram
+
 
 ## User Flow Diagram
 
 Here is the user flow for the system:
 
-![User Flow Diagram](https://www.mermaidchart.com/raw/f19292fc-8e5f-4bbc-87d9-986f7e08c625?theme=light&version=v0.1&format=svg)
+![User Flow Diagram](https://eventify.amartable.com/diagram.svg)
 
 ## Installation
 
