@@ -33,7 +33,7 @@ To log in:
 
 Here is the user flow for the system:
 
-![User Flow Diagram](https://eventify.amartable.com/diagram.svg)
+![User Flow Diagram](diagram.svg)
 
 ## Installation
 
