@@ -26,7 +26,7 @@ To log in:
 - **Frontend**: HTML, CSS, JavaScript
 - **Backend**: PHP
 - **Database**: MySQL
-- **Additional Libraries**: 
+- **Additional Libraries**: Tailwind CSS
 
 
 ## User Flow Diagram
